@@ -1,4 +1,4 @@
-from src.spot_check import CQIPredict
+from src.spot_check_rssi import CQIPredict
 
-t = CQIPredict('static.csv')
+t = CQIPredict('static_rssi.csv')
 t.run()

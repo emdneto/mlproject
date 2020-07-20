@@ -11,17 +11,20 @@ class Prepare:
         self.datasetPath = path.join(self.path, 'data', 'dataset')
         self.datasetStaticPath = path.join(self.datasetPath, 'static')
         self.datasetPedestrianPath = path.join(self.datasetPath, 'pedestrian')
+        self.datasetCarPath = path.join(self.datasetPath, 'car')
+        self.datasetTrainPath = path.join(self.datasetPath, 'train')
+        self.datasetBusPath = path.join(self.datasetPath, 'bus')
         self.modifiedPath = path.join(self.path, 'data', 'modified')
-        self.peak = None
+        self.current = self.datasetTrainPath
 
     def preparing(self):
         print(f'[*] Current dataset Path: {self.datasetPath}')
         print(f'[*] Current dataset Static Path: {self.datasetStaticPath}')
         print(f'[*] Current dataset Pedestrian Path: {self.datasetPedestrianPath}')
         print('--------------------------------------------------------------------')
-        csvFiles = listdir(self.datasetStaticPath)
+        csvFiles = listdir(self.current)
         for csvFile in csvFiles:
-            filepath = path.join(self.datasetStaticPath, csvFile)
+            filepath = path.join(self.current, csvFile)
             col_names = ['Timestamp','Longitude', 'Latitude', 'Speed', 'Operatorname', 'CellID', 'NetworkMode', 'RSRP', 'RSRQ', 'SNR', 'CQI', 'DL_bitrate', 'UL_bitrate', 'State']
             dataset = pd.read_csv(filepath)
             #test = dataset.head(10)]
@@ -72,7 +75,7 @@ class Prepare:
             dataset = dataset[['Timestamp','Longitude', 'Latitude', 'Speed', 'Operatorname', 'CellID', 'NetworkMode', 
 'RSRP', 'RSRQ', 'SNR', 'RSSI', 'DL_bitrate', 'UL_bitrate','State', 'NRxRSRP','NRxRSRQ', 'ServingCell_Lon', 'ServingCell_Lat', 
 'ServingCell_Distance', 'WeekDay', 'DayPeriod', 'Month', 'CQI']]
-            dataset.to_csv(path.join(self.modifiedPath, 'teste.csv'), mode='a', header=False)
+            dataset.to_csv(path.join(self.modifiedPath, 'train.csv'), mode='a', header=False)
             print(dataset.head(10))
             
 p = Prepare()

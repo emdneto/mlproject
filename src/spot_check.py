@@ -16,6 +16,8 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -38,50 +40,82 @@ class CQIPredict:
 		self.datasetPath = path.join(self.path, 'data', 'modified', scenario)
 
 	def run(self):
-		names = ['Longitude', 'Latitude', 'Speed', 'CellID', 
-				'RSRP', 'RSRQ', 'SNR', 'RSSI', 'ServingCell_Lon', 'ServingCell_Lat', 
+		names = ['Longitude', 'Latitude', 'Speed', 'Operatorname', 'CellID', 
+				'RSRP', 'RSRQ', 'SNR', 'RSSI', 'State', 'ServingCell_Lon', 'ServingCell_Lat', 
 				'ServingCell_Distance', 'CQI']
-
+		#names = ['Speed', 'Operatorname', 'CellID', 
+		#		'RSRP', 'RSRQ', 'SNR', 'RSSI', 'State', 
+		#		'ServingCell_Distance', 'CQI']
 		dataset = read_csv(self.datasetPath, usecols=names)
+		#print(dataset.shape)
+		#print(dataset.head(20))
+		#print(dataset.describe())
+		print(dataset.groupby('CQI').size())
+
+		#dataset.plot(kind='box', subplots=True, layout=(12,12), sharex=False, sharey=False)
+		#pyplot.show()
+		#dataset.hist()
+		#pyplot.show()
+		#scatter_matrix(dataset)
+		#pyplot.show()
+		label_encoder_X = LabelEncoder()
+		dataset['Operatorname'] = label_encoder_X.fit_transform(dataset['Operatorname'])
+		dataset['State'] = label_encoder_X.fit_transform(dataset['State'])
+		print(dataset.head(5))
+		
+		
 		array = dataset.values
 		f1 = len(names) - 2
 		f2 = len(names) - 1
-
+		
 		#Separando variáveis independentes e dependentes
 		X = array[:,0:f1]
 		y = array[:,f2]
 		
-		imputer = SimpleImputer(missing_values = np.nan, strategy = "mean", verbose = 0)
+
+	
+		imputer = SimpleImputer(missing_values = np.nan, strategy = "most_frequent", verbose = 0)
 		imputer = imputer.fit(X)
 		X = imputer.transform(X)
 
+		#ct = ColumnTransformer([("encoder", OneHotEncoder(), [3])], remainder="passthrough")
+		#X = np.array(ct.fit_transform(X), dtype=np.float)
+
+		#print(X)
 		X_train, X_validation, Y_train, Y_validation = train_test_split(X, y, test_size=0.20, random_state=50)
 		ss_X = StandardScaler()
 		X_train = ss_X.fit_transform(X_train)
 		X_validation = ss_X.transform(X_validation)
+		#print('before')
+		#print(X_train)
+
+		lda = LinearDiscriminantAnalysis()
+		x_train2 = lda.fit_transform(X_train, Y_train)
+		#print('after')
+		#print(x_train2)
 		
 		models = []
 
 		models.append(('LR', LogisticRegression(solver='liblinear', multi_class='ovr')))
 		models.append(('LDA', LinearDiscriminantAnalysis()))
 		models.append(('KNN', KNeighborsClassifier(3)))
-		models.append(('CART', DecisionTreeClassifier(max_depth=5)))
+		models.append(('CART', DecisionTreeClassifier()))
 		models.append(('NB', GaussianNB()))
-		models.append(('GPC', GaussianProcessClassifier(1.0 * RBF(1.0))))
+		#models.append(('GPC', GaussianProcessClassifier(1.0 * RBF(1.0))))
 		models.append(('SVM', SVC(gamma='auto')))
-		models.append(('SVM-2', SVC(gamma=2, C=1)))
-		models.append(('SVM-3', SVC(kernel="linear", C=0.025)))
-		models.append(('RF', RandomForestClassifier(max_depth=5, n_estimators=100, max_features=1)))
+		#models.append(('SVM-2', SVC(gamma=2, C=1)))
+		#models.append(('SVM-3', SVC(kernel="linear", C=0.025)))
+		models.append(('RF', RandomForestClassifier(n_estimators=100, max_features=3)))
 		models.append(('GBC', GradientBoostingClassifier()))
-		models.append(('ABC', AdaBoostClassifier()))
+		#models.append(('ABC', AdaBoostClassifier()))
 		models.append(('MPLC', MLPClassifier(alpha=1, max_iter=1000)))
-		models.append(('QDA', QuadraticDiscriminantAnalysis()))
+		#models.append(('QDA', QuadraticDiscriminantAnalysis()))
 
 		results = []
 		names = []
 		for name, model in models:
-			kfold = StratifiedKFold(n_splits=2, random_state=0, shuffle=True)
-			cv_results = cross_val_score(model, X_train, Y_train, cv=kfold, scoring='accuracy')
+			kfold = StratifiedKFold(n_splits=2)
+			cv_results = cross_val_score(model, x_train2, Y_train, cv=kfold, scoring='accuracy')
 			results.append(cv_results)
 			names.append(name)
 			print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
@@ -103,7 +137,8 @@ class CQIPredict:
 
 
 
-
+t = CQIPredict('train.csv')
+t.run()
 #path = "/home/ws/workspace/mestrado/mlproject/data/dataset/static/B_2018.02.12_16.14.01.csv"
 #path = "/home/ws/workspace/mestrado/mlproject/data/modified/static.csv"
 #names = ['Longitude', 'Latitude', 'Speed', 'CellID', 
