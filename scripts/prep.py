@@ -15,7 +15,7 @@ class Prepare:
         self.datasetTrainPath = path.join(self.datasetPath, 'train')
         self.datasetBusPath = path.join(self.datasetPath, 'bus')
         self.modifiedPath = path.join(self.path, 'data', 'modified')
-        self.current = self.datasetTrainPath
+        self.current = self.datasetStaticPath
 
     def preparing(self):
         print(f'[*] Current dataset Path: {self.datasetPath}')
@@ -31,7 +31,6 @@ class Prepare:
             data_top = dataset.head()
             for i, row in dataset.iterrows():
                 
-
                 ts = row['Timestamp']
                 date_time_obj = datetime.datetime.strptime(ts, '%Y.%m.%d_%H.%M.%S')
                 date = date_time_obj.date()
@@ -68,14 +67,23 @@ class Prepare:
                     if dataset.loc[i, name] == '-':
                         dataset.loc[i, name] = 'NaN'
 
-
+                cqi = row['CQI']
+                if cqi != '-': 
+                    cqi = int(cqi)
+                    if cqi <= 6:
+                        dataset.loc[i, 'CQI'] = 'low'
+                    if cqi >= 7 and cqi <= 9:
+                        dataset.loc[i, 'CQI'] = 'medium'
+                    if cqi >= 10:
+                        dataset.loc[i, 'CQI'] = 'high'
+                    
                 #dataset.loc[i, "DL_UL"] = row['DL_bitrate'] + row['UL_bitrate']
                 
 
             dataset = dataset[['Timestamp','Longitude', 'Latitude', 'Speed', 'Operatorname', 'CellID', 'NetworkMode', 
 'RSRP', 'RSRQ', 'SNR', 'RSSI', 'DL_bitrate', 'UL_bitrate','State', 'NRxRSRP','NRxRSRQ', 'ServingCell_Lon', 'ServingCell_Lat', 
 'ServingCell_Distance', 'WeekDay', 'DayPeriod', 'Month', 'CQI']]
-            dataset.to_csv(path.join(self.modifiedPath, 'train.csv'), mode='a', header=False)
+            dataset.to_csv(path.join(self.modifiedPath, 'teste.csv'), mode='a', header=False)
             print(dataset.head(10))
             
 p = Prepare()
