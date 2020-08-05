@@ -166,7 +166,7 @@ class PreProcessing:
         dataset['Operatorname'] = label_encoder_X.fit_transform(dataset['Operatorname'])
         dataset['State'] = label_encoder_X.fit_transform(dataset['State'])
         
-        testando = True
+        #testando = True
         #df_filtered = df[df['Age'] >= 25] 
         #if testando:
         
@@ -224,4 +224,4 @@ class PreProcessing:
 
 teste = PreProcessing('teste.csv')
 #teste.reduction()
-teste.featureSelection()
+teste.reduction()
