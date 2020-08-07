@@ -40,7 +40,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import SelectFromModel
 from pprint import pprint
 from pre_processing.base import BaseReduction
-
+from sklearn.metrics import plot_confusion_matrix
 
 class Supervisioned:
 
@@ -97,20 +97,20 @@ class Supervisioned:
 
     def kNN(self):
         print('----------------------------------------------------------')
-        print('Início Experimento kNN - 10-fold cross validation. W -> Com peso. Atributos numéricos escalonados')
+        print('Início Experimento kNN - 10-fold cross validation. W -> Com peso. Atributos numéricos escalonados. Treinando modelos.')
         skf = StratifiedKFold(n_splits=10)
         
         knnParameters = []
-        for i in range(1,6):
+        kVar = [1, 3, 5]
+        for i in kVar:
             knnParameters.append((f'kNN-{i}', KNeighborsClassifier(n_neighbors=i)))
             knnParameters.append((f'kNN-{i}-W', KNeighborsClassifier(n_neighbors=i, weights='distance')))
             
-        #print(len(dataset.columns))
         results = {}
 
         for base in self.bases:
             print('----------------')
-            print(base, 'cross_val_score')
+            print(base, 'cross_val_score treinamento')
             print('---------------')
             dataset = self.bases[base]
             array = dataset.values
@@ -118,8 +118,10 @@ class Supervisioned:
             X = array[:,0:arrLen]
             y = array[:,arrLen]
             results[base] = {}
-            X_train, X_validation, Y_train, Y_validation = train_test_split(X, y, test_size=0.20, random_state=50)
+            X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.20, random_state=50)
             score = []
+            score2 = []
+            names = []
             for name, model in knnParameters:
 
                 cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
@@ -129,19 +131,50 @@ class Supervisioned:
                 print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
                 mean = results[base][name]['mean']
                 score.append(mean)
+                names.append(name)
+                score2.append(cv_results)
             
+
             sortArr = sorted(score, reverse=True)
-
+            fig = pyplot.figure()
+            ax = fig.add_subplot(111)
+            bp = ax.boxplot(score2, labels=names)
+            ax.set_title(f'10-fold Cross-Validation kNN {base}')
+            #pyplot.boxplot(score2, labels=names)         
+            #pyplot.title(f'10-fold Cross-Validation kNN {base}')       
+            fig.savefig(f'figs/knn/{base}-kNN.png')
             bestValue = sortArr[0]
-            print(f'{base}: {bestValue} -- {sortArr}')
+            #print(f'{base}: {bestValue} -- {sortArr}')
+            print(score2)
+            for name, model in knnParameters:
+                mean = results[base][name]['mean']
+                if mean == bestValue:
+                    print(f'{base} com score médio de {bestValue}. Melhor parâmetro: {name}')
+                    t = model.fit(X_train, Y_train)
+                    predictions = model.predict(X_test)
+                    
+                    # Evaluate predictions
+                    print('Acurácia de predição:', accuracy_score(Y_test, predictions))
+                    print('Matriz de confusão:')
+                    print(confusion_matrix(Y_test, predictions))
+                    print('Report de classificação:')
+                    print(classification_report(Y_test, predictions))#, zero_division=1))
+                    # Plot non-normalized confusion matrix
+                    titles_options = [("Matriz de confusão sem normalização", None), ("Matriz de confusão normalizada", 'true')]
+                    class_names = ['high', 'low', 'medium']
+                    for title, normalize in titles_options:
+                        disp = plot_confusion_matrix(t, X_test, Y_test, 
+                                                        display_labels=class_names, 
+                                                        cmap=pyplot.cm.Blues, 
+                                                        normalize=normalize)
+                        disp.ax_.set_title(title)
+                        disp.figure_.savefig(f'figs/knn/cm-{base}-{normalize}.png')
+                        #fig.savefig(f'figs/knn/confusion-matrix-{normalize}.png')
+
 
             
             
-            
-
-        
-        pprint(results)
-        print('Fim Experimento kNN - 10-fold cross validation. W -> Com peso. Atributos numéricos escalonados')
+        print('Fim Experimento kNN -')
         print('----------------------------------------------------------')
 
             #sort_orders = sorted(results[base].items(), key=lambda x: x[1], reverse=True)
