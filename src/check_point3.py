@@ -191,7 +191,7 @@ class Supervisioned:
             mapp = [0.00001, 0.001, 0.01, 0.1, 0.2]
             mlp = 1
             for i in mapp:
-                selectedMlps.append((f'MLP-{mlp}', MLPClassifier(alpha=i, solver='sgd', momentum=0.8, max_iter=500, learning_rate='adaptive', learning_rate_init=0.1, hidden_layer_sizes=12)))
+                selectedMlps.append((f'MLP-{mlp}', MLPClassifier(alpha=i, momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12)))
                 mlp += 1
 
             
