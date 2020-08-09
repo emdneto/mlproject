@@ -239,7 +239,7 @@ class Supervisioned:
             for i in range(1,4):
                 for name, model in selectedMlps:
                     size = i * 10
-                    randomState = i * 15.5
+                    randomState = i * 15
                     X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=size, random_state=randomState)
                     cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
                     print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
