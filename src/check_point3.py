@@ -1,6 +1,10 @@
 from pandas import read_csv
-from pandas.plotting import scatter_matrix
+from pprint import pprint
+import numpy as np
+import pandas as pd
+from scipy import stats
 from matplotlib import pyplot
+from pandas.plotting import scatter_matrix
 from os import path, getcwd, listdir
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
@@ -34,18 +38,14 @@ from sklearn.naive_bayes import ComplementNB
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.naive_bayes import CategoricalNB
-from pprint import pprint
-import numpy as np
-import pandas as pd
-from scipy import stats
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import chi2
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import SelectFromModel
-from pprint import pprint
 from pre_processing.base import BaseReduction
 from sklearn.metrics import plot_confusion_matrix
 from sklearn import tree
+from sklearn.preprocessing import normalize
 
 class Supervisioned:
 
@@ -100,6 +100,7 @@ class Supervisioned:
 
         #self.kNN()
         #self.ad()
+        #self.nb()
         self.mlp()
 
 
@@ -108,6 +109,7 @@ class Supervisioned:
         print('----------------------------------------------------------')
         print('Início Experimento Redes Neurais ')
 
+        '''
         skf = StratifiedKFold(n_splits=2)
 
         mlps = []
@@ -122,8 +124,9 @@ class Supervisioned:
                     print(i, mi, hl, lr)
                     mlps.append((f'{i}', MLPClassifier(random_state=0, solver='sgd', momentum=momentum, max_iter=mi, learning_rate='adaptive', learning_rate_init=lr, hidden_layer_sizes=hl)))
                     i += 1
-        
+        '''
         results = {}
+
         for base in self.bases:
             print('----------------')
             print(base, 'cross_val_score treinamento')
@@ -143,6 +146,9 @@ class Supervisioned:
             score2 = []
             names = []
 
+
+
+            '''
             for name, model in mlps:
 
                 cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
@@ -163,10 +169,66 @@ class Supervisioned:
             fig.savefig(f'figs/mlp/{base}-mlp.png')
             bestValue = sortArr[0]
 
+
             for name, model in mlps:
                 mean = results[base][name]['mean']
                 if mean == bestValue:
-                    print(f'{base} com score médio de {bestValue}. Melhor parâmetro: {name}')
+                    print(f'{base} com score médio de {bestValue}. Melhor parâmetro (index): {name}')
+                    model.set_params()
+                    clf = model.fit(X_train, Y_train)
+                    predictions = model.predict(X_test)
+                    
+                    # Evaluate predictions
+                    print('Acurácia de predição:', accuracy_score(Y_test, predictions))
+                    print('Matriz de confusão:')
+                    print(confusion_matrix(Y_test, predictions))
+                    print('Report de classificação:')
+                    print(classification_report(Y_test, predictions))                 
+            '''
+
+            skf = StratifiedKFold(n_splits=10)
+            selectedMlps = []
+            mapp = [0.00001, 0.001, 0.01, 0.1, 0.2]
+            mlp = 1
+            for i in mapp:
+                selectedMlps.append((f'MLP-{mlp}', MLPClassifier(alpha=i, solver='sgd', momentum=0.8, max_iter=500, learning_rate='adaptive', learning_rate_init=0.1, hidden_layer_sizes=12)))
+                mlp += 1
+
+            
+            for name, model in selectedMlps:
+                cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
+                results[base][name] = {}
+                results[base][name]['mean'] = cv_results.mean()
+                results[base][name]['std'] = cv_results.std()
+                print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+                mean = results[base][name]['mean']
+                score.append(mean)
+                names.append(name)
+                score2.append(cv_results)
+
+            sortArr = sorted(score, reverse=True)
+            #fig = pyplot.figure()
+            #ax = fig.add_subplot(111)
+            #bp = ax.boxplot(score2, labels=names)
+            #ax.set_title(f'{base}') 
+            #fig.savefig(f'figs/mlp/{base}-mlp.png')
+            bestValue = sortArr[0]
+
+            for name, model in selectedMlps:
+                #mean = results[base][name]['mean']
+                #if mean == bestValue:
+                #print(f'{base} com score médio de {bestValue}. Melhor parâmetro (index): {name}')
+                #model.set_params()
+                clf = model.fit(X_train, Y_train)
+                predictions = model.predict(X_test)
+                
+                # Evaluate predictions
+                print(f'{name} Acurácia de predição:', accuracy_score(Y_test, predictions))
+                #print('Matriz de confusão:')
+                #print(confusion_matrix(Y_test, predictions))
+                #print('Report de classificação:')
+                #print(classification_report(Y_test, predictions))
+            
 
 
 
@@ -174,12 +236,13 @@ class Supervisioned:
         print('----------------------------------------------------------')
         print('Início Experimento Naive Bayes ')
         
+        skf = StratifiedKFold(n_splits=2)
         nbParameters = []
-        nbParameters.append((f'NB1', GaussianNB()))
-        nbParameters.append((f'NB2', MultinomialNB()))
-        nbParameters.append((f'NB3', ComplementNB()))
-        nbParameters.append((f'NB4', BernoulliNB()))
-        nbParameters.append((f'NB5', CategoricalNB()))
+        nbParameters.append((f'NB', GaussianNB()))
+        #nbParameters.append((f'NB2', MultinomialNB()))
+        #nbParameters.append((f'NB3', ComplementNB()))
+        #nbParameters.append((f'NB4', BernoulliNB()))
+        #nbParameters.append((f'NB5', CategoricalNB()))
 
         results = {}
 
@@ -188,6 +251,8 @@ class Supervisioned:
             print(base, 'cross_val_score treinamento')
             print('---------------')
             dataset = self.bases[base]
+            dataset.hist()
+            pyplot.show()
             feature_names = ['Speed', 'Operatorname', 'CellID', 
 				'RSRP', 'RSRQ', 'SNR', 'RSSI', 'State', 
 				'ServingCell_Distance', 'CQI']
@@ -201,7 +266,8 @@ class Supervisioned:
             score = []
             score2 = []
             names = []
-            for name, model in adParameters:
+
+            for name, model in nbParameters:
 
                 cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
                 results[base][name] = {}
@@ -221,32 +287,22 @@ class Supervisioned:
             fig.savefig(f'figs/nb/{base}-nb.png')
             bestValue = sortArr[0]
 
-            for name, model in adParameters:
+            for name, model in nbParameters:
                 #mean = results[base][name]['mean']
                 #if mean == bestValue:
                 print(f'{name} {base} com score médio de {bestValue}.')
                 clf = model.fit(X_train, Y_train)
                 predictions = model.predict(X_test)
-                fig2 = pyplot.figure(figsize=(25,20)) 
-                _ = tree.plot_tree(clf, feature_names=feature_names,  class_names=class_names, filled=True)
-                fig2.savefig(f'figs/ad/decision-tree-{base}-{name}')
+                t = model.predict_proba(X_test)
+                print()
+                #print(dir(model))
                 # Evaluate predictions
                 print('Acurácia de predição:', accuracy_score(Y_test, predictions))
-                print('Matriz de confusão:')
-                print(confusion_matrix(Y_test, predictions))
-                print('Report de classificação:')
-                print(classification_report(Y_test, predictions))#, zero_division=1))
-                # Plot non-normalized confusion matrix
-                titles_options = [("Matriz de confusão sem normalização", None), ("Matriz de confusão normalizada", 'true')]
-                class_names = ['high', 'low', 'medium']
-                for title, normalize in titles_options:
-                    disp = plot_confusion_matrix(clf, X_test, Y_test, 
-                                                    display_labels=class_names, 
-                                                    cmap=pyplot.cm.Blues, 
-                                                    normalize=normalize)
-                    disp.ax_.set_title(f'{title} - {base}')
-                    disp.figure_.savefig(f'figs/ad/cm-{base}-{normalize}-{name}.png')
-                    #fig.savefig(f'figs/knn/confusion-matrix-{normalize}.png')
+                #print('Matriz de confusão:')
+                #print(confusion_matrix(Y_test, predictions))
+                #print('Report de classificação:')
+                #print(classification_report(Y_test, predictions))#, zero_division=1))
+
 
     def ad(self):
         print('----------------------------------------------------------')
@@ -254,9 +310,10 @@ class Supervisioned:
         skf = StratifiedKFold(n_splits=10)
         
         adParameters = []
-
+        pruning = [0.1, 0.01, 0.001, 0.0001, 0.00001]
         adParameters.append((f'AD', DecisionTreeClassifier()))
-        adParameters.append((f'AD-Poda', DecisionTreeClassifier(ccp_alpha=0.01)))
+        for i in pruning:
+            adParameters.append((f'AD-P', DecisionTreeClassifier(ccp_alpha=i)))
         #adParameters.append((f'AD-Poda2', DecisionTreeClassifier(ccp_alpha=0.2)))
 
         results = {}
@@ -292,38 +349,44 @@ class Supervisioned:
                 score2.append(cv_results)
             
             sortArr = sorted(score, reverse=True)
-            fig = pyplot.figure()
-            ax = fig.add_subplot(111)
-            bp = ax.boxplot(score2, labels=names)
-            ax.set_title(f'10-fold Cross-Validation AD {base}') 
-            fig.savefig(f'figs/ad/{base}-ad.png')
+            #fig = pyplot.figure()
+            #ax = fig.add_subplot(111)
+            #bp = ax.boxplot(score2, labels=names)
+            #ax.set_title(f'10-fold Cross-Validation AD {base}') 
+            #fig.savefig(f'figs/ad/{base}-ad.png')
             bestValue = sortArr[0]
 
             for name, model in adParameters:
-                #mean = results[base][name]['mean']
+                mean = results[base][name]['mean']
                 #if mean == bestValue:
-                print(f'{name} {base} com score médio de {bestValue}.')
+                params = model.get_params()
+                pruning = params['ccp_alpha']
+                #if pruning > 0:
+                #    print(f'{name} {base} com score médio de {mean}. Pruning: {pruning} ')
+                #else:
+                 #   print(f'{name} {base} com score médio de {bestValue}.')  
+
                 clf = model.fit(X_train, Y_train)
                 predictions = model.predict(X_test)
-                fig2 = pyplot.figure(figsize=(25,20)) 
-                _ = tree.plot_tree(clf, feature_names=feature_names,  class_names=class_names, filled=True)
-                fig2.savefig(f'figs/ad/decision-tree-{base}-{name}')
+                #fig2 = pyplot.figure(figsize=(25,20)) 
+                #_ = tree.plot_tree(clf, feature_names=feature_names,  class_names=class_names, filled=True)
+                #fig2.savefig(f'figs/ad/decision-tree-{base}-{name}')
                 # Evaluate predictions
                 print('Acurácia de predição:', accuracy_score(Y_test, predictions))
-                print('Matriz de confusão:')
-                print(confusion_matrix(Y_test, predictions))
-                print('Report de classificação:')
-                print(classification_report(Y_test, predictions))#, zero_division=1))
+                #print('Matriz de confusão:')
+                #print(confusion_matrix(Y_test, predictions))
+                #print('Report de classificação:')
+                #print(classification_report(Y_test, predictions))#, zero_division=1))
                 # Plot non-normalized confusion matrix
-                titles_options = [("Matriz de confusão sem normalização", None), ("Matriz de confusão normalizada", 'true')]
-                class_names = ['high', 'low', 'medium']
-                for title, normalize in titles_options:
-                    disp = plot_confusion_matrix(clf, X_test, Y_test, 
-                                                    display_labels=class_names, 
-                                                    cmap=pyplot.cm.Blues, 
-                                                    normalize=normalize)
-                    disp.ax_.set_title(f'{title} - {base}')
-                    disp.figure_.savefig(f'figs/ad/cm-{base}-{normalize}-{name}.png')
+                #titles_options = [("Matriz de confusão sem normalização", None), ("Matriz de confusão normalizada", 'true')]
+                #class_names = ['high', 'low', 'medium']
+                #for title, normalize in titles_options:
+                #    disp = plot_confusion_matrix(clf, X_test, Y_test, 
+                 #                                   display_labels=class_names, 
+                  #                                  cmap=pyplot.cm.Blues, 
+                   #                                 normalize=normalize)
+                    #disp.ax_.set_title(f'{title} - {base}')
+                    #disp.figure_.savefig(f'figs/ad/cm-{base}-{normalize}-{name}.png')
                     #fig.savefig(f'figs/knn/confusion-matrix-{normalize}.png')
 
 
@@ -337,8 +400,8 @@ class Supervisioned:
         knnParameters = []
         kVar = [1, 3, 5, 7, 9, 11, 13]
         for i in kVar:
-            knnParameters.append((f'kNN-{i}', KNeighborsClassifier(n_neighbors=i)))
-            knnParameters.append((f'kNN-{i}-W', KNeighborsClassifier(n_neighbors=i, weights='distance')))
+            knnParameters.append((f'{i}', KNeighborsClassifier(n_neighbors=i)))
+            knnParameters.append((f'{i}W', KNeighborsClassifier(n_neighbors=i, weights='distance')))
             
         results = {}
 
@@ -373,7 +436,8 @@ class Supervisioned:
             fig = pyplot.figure()
             ax = fig.add_subplot(111)
             bp = ax.boxplot(score2, labels=names)
-            ax.set_title(f'10-fold Cross-Validation kNN {base}')
+            #ax.set_title(f'kNN {base}')
+            
             #pyplot.boxplot(score2, labels=names)         
             #pyplot.title(f'10-fold Cross-Validation kNN {base}')       
             fig.savefig(f'figs/knn/{base}-kNN.png')
@@ -402,21 +466,9 @@ class Supervisioned:
                                                         normalize=normalize)
                         disp.ax_.set_title(f'{title} - {base}')
                         disp.figure_.savefig(f'figs/knn/cm-{base}-{normalize}.png')
-                        #fig.savefig(f'figs/knn/confusion-matrix-{normalize}.png')
-
-
-            
-            
+                        #fig.savefig(f'figs/knn/confusion-matrix-{normalize}.png')            
         print('Fim Experimento kNN -')
         print('----------------------------------------------------------')
-
-            #sort_orders = sorted(results[base].items(), key=lambda x: x[1], reverse=True)
-
-                
-
-
-
-
 
 chkp = Supervisioned('teste.csv')
 chkp.generateBases()
