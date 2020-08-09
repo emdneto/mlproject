@@ -194,7 +194,8 @@ class Supervisioned:
                 selectedMlps.append((f'MLP-{mlp}', MLPClassifier(alpha=i, momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12)))
                 mlp += 1
 
-            
+            #for i in range(1,4):
+                
             for name, model in selectedMlps:
                 cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
                 results[base][name] = {}
@@ -213,7 +214,8 @@ class Supervisioned:
             #ax.set_title(f'{base}') 
             #fig.savefig(f'figs/mlp/{base}-mlp.png')
             bestValue = sortArr[0]
-
+            
+            acuracias = []
             for name, model in selectedMlps:
                 #mean = results[base][name]['mean']
                 #if mean == bestValue:
@@ -224,10 +226,15 @@ class Supervisioned:
                 
                 # Evaluate predictions
                 print(f'{name} Acurácia de predição:', accuracy_score(Y_test, predictions))
+                a = accuracy_score(Y_test, predictions)
+                acuracias.append(a)
                 #print('Matriz de confusão:')
                 #print(confusion_matrix(Y_test, predictions))
                 #print('Report de classificação:')
                 #print(classification_report(Y_test, predictions))
+            mean = np.mean(acuracias)
+            std = np.std(acuracias)
+            print(f'Acurácia Média: {mean} ({std})')
             
 
 
@@ -286,7 +293,7 @@ class Supervisioned:
             ax.set_title(f'{base}') 
             fig.savefig(f'figs/nb/{base}-nb.png')
             bestValue = sortArr[0]
-
+            acuracias = []
             for name, model in nbParameters:
                 #mean = results[base][name]['mean']
                 #if mean == bestValue:
@@ -298,10 +305,15 @@ class Supervisioned:
                 #print(dir(model))
                 # Evaluate predictions
                 print('Acurácia de predição:', accuracy_score(Y_test, predictions))
+                a = accuracy_score(Y_test, predictions)
+                acuracias.append(a)
                 #print('Matriz de confusão:')
                 #print(confusion_matrix(Y_test, predictions))
                 #print('Report de classificação:')
                 #print(classification_report(Y_test, predictions))#, zero_division=1))
+            mean = np.mean(acuracias)
+            std = np.std(acuracias)
+            print(f'Acurácia Média: {mean} ({std})')
 
 
     def ad(self):
@@ -355,7 +367,7 @@ class Supervisioned:
             #ax.set_title(f'10-fold Cross-Validation AD {base}') 
             #fig.savefig(f'figs/ad/{base}-ad.png')
             bestValue = sortArr[0]
-
+            acuracias = []
             for name, model in adParameters:
                 mean = results[base][name]['mean']
                 #if mean == bestValue:
@@ -373,6 +385,8 @@ class Supervisioned:
                 #fig2.savefig(f'figs/ad/decision-tree-{base}-{name}')
                 # Evaluate predictions
                 print('Acurácia de predição:', accuracy_score(Y_test, predictions))
+                a = accuracy_score(Y_test, predictions)
+                acuracias.append(a)
                 #print('Matriz de confusão:')
                 #print(confusion_matrix(Y_test, predictions))
                 #print('Report de classificação:')
@@ -388,6 +402,9 @@ class Supervisioned:
                     #disp.ax_.set_title(f'{title} - {base}')
                     #disp.figure_.savefig(f'figs/ad/cm-{base}-{normalize}-{name}.png')
                     #fig.savefig(f'figs/knn/confusion-matrix-{normalize}.png')
+            mean = np.mean(acuracias)
+            std = np.std(acuracias)
+            print(f'Acurácia Média: {mean} ({std})')
 
 
 
