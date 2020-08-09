@@ -194,8 +194,7 @@ class Supervisioned:
                 selectedMlps.append((f'MLP-{mlp}', MLPClassifier(alpha=i, momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12)))
                 mlp += 1
 
-            #for i in range(1,4):
-                
+
             for name, model in selectedMlps:
                 cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
                 results[base][name] = {}
@@ -235,6 +234,21 @@ class Supervisioned:
             mean = np.mean(acuracias)
             std = np.std(acuracias)
             print(f'Acurácia Média: {mean} ({std})')
+
+            table2_mean = []
+            for i in range(1,4):
+                for name, model in selectedMlps:
+                    size = i * 10
+                    randomState = i * 15.5
+                    X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=size, random_state=randomState)
+                    cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
+                    print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+                    mean = cv_results.mean()
+                    table2_mean.append(mean)
+
+            mean = np.mean(table2_mean)
+            std = np.std(table2_mean)
+            print(f'3x10-Fold Cross Validation: {mean} ({std})')
             
 
 
