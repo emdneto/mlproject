@@ -99,9 +99,9 @@ class Supervisioned:
         }
 
         #self.kNN()
-        #self.ad()
+        self.ad()
         #self.nb()
-        self.mlp()
+        #self.mlp()
 
 
 
@@ -266,14 +266,14 @@ class Supervisioned:
         #nbParameters.append((f'NB5', CategoricalNB()))
 
         results = {}
-
+        mediaGeral = []
         for base in self.bases:
             print('----------------')
             print(base, 'cross_val_score treinamento')
             print('---------------')
             dataset = self.bases[base]
-            dataset.hist()
-            pyplot.show()
+            #dataset.hist()
+            #pyplot.show()
             feature_names = ['Speed', 'Operatorname', 'CellID', 
 				'RSRP', 'RSRQ', 'SNR', 'RSSI', 'State', 
 				'ServingCell_Distance', 'CQI']
@@ -328,6 +328,25 @@ class Supervisioned:
             mean = np.mean(acuracias)
             std = np.std(acuracias)
             print(f'Acurácia Média: {mean} ({std})')
+            
+            table2_mean = []
+            for i in range(1,4):
+                for name, model in nbParameters:
+                    size = i * 10
+                    randomState = i * 15
+                    X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=size, random_state=randomState)
+                    cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
+                    print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+                    mean = cv_results.mean()
+                    table2_mean.append(mean)
+
+            mean = np.mean(table2_mean)
+            std = np.std(table2_mean)
+            mediaGeral.append(mean)
+            print(f'3x10-Fold Cross Validation: {mean} ({std})')
+        
+        mediaGeral_result = np.mean(mediaGeral)
+        print(f'MediaGeral: {mediaGeral_result}')
 
 
     def ad(self):
@@ -343,6 +362,7 @@ class Supervisioned:
         #adParameters.append((f'AD-Poda2', DecisionTreeClassifier(ccp_alpha=0.2)))
 
         results = {}
+
         for base in self.bases:
             print('----------------')
             print(base, 'cross_val_score treinamento')
@@ -419,6 +439,24 @@ class Supervisioned:
             mean = np.mean(acuracias)
             std = np.std(acuracias)
             print(f'Acurácia Média: {mean} ({std})')
+            table2_mean = []
+            for i in range(1,4):
+                for name, model in adParameters:
+                    size = i * 10
+                    randomState = i * 15
+                    X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=size, random_state=randomState)
+                    cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
+                    print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+                    mean = cv_results.mean()
+                    table2_mean.append(mean)
+
+            mean = np.mean(table2_mean)
+            std = np.std(table2_mean)
+            
+            print(f'3x10-Fold Cross Validation: {mean} ({std})')
+        
+        #
+        #print(f'MediaGeral: {mediaGeral_result}')
 
 
 
@@ -474,6 +512,7 @@ class Supervisioned:
             fig.savefig(f'figs/knn/{base}-kNN.png')
             bestValue = sortArr[0]
             #print(f'{base}: {bestValue} -- {sortArr}')
+            acuracias = []
             for name, model in knnParameters:
                 mean = results[base][name]['mean']
                 if mean == bestValue:
@@ -483,10 +522,12 @@ class Supervisioned:
                     
                     # Evaluate predictions
                     print('Acurácia de predição:', accuracy_score(Y_test, predictions))
-                    print('Matriz de confusão:')
-                    print(confusion_matrix(Y_test, predictions))
-                    print('Report de classificação:')
-                    print(classification_report(Y_test, predictions))#, zero_division=1))
+                    #print('Matriz de confusão:')
+                    #print(confusion_matrix(Y_test, predictions))
+                    #print('Report de classificação:')
+                    #print(classification_report(Y_test, predictions))#, zero_division=1))
+                    a = accuracy_score(Y_test, predictions)
+                    acuracias.append(a)
                     # Plot non-normalized confusion matrix
                     titles_options = [("Matriz de confusão sem normalização", None), ("Matriz de confusão normalizada", 'true')]
                     class_names = ['high', 'low', 'medium']
@@ -497,7 +538,26 @@ class Supervisioned:
                                                         normalize=normalize)
                         disp.ax_.set_title(f'{title} - {base}')
                         disp.figure_.savefig(f'figs/knn/cm-{base}-{normalize}.png')
-                        #fig.savefig(f'figs/knn/confusion-matrix-{normalize}.png')            
+                        #fig.savefig(f'figs/knn/confusion-matrix-{normalize}.png') 
+                        #    
+            mean = np.mean(acuracias)
+            std = np.std(acuracias)
+            print(f'Acurácia Média: {mean} ({std})')
+            table2_mean = []
+            for i in range(1,4):
+                for name, model in knnParameters:
+                    size = i * 10
+                    randomState = i * 15
+                    X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=size, random_state=randomState)
+                    cv_results = cross_val_score(model, X_train, Y_train, cv=skf, scoring='accuracy')
+                    #print('%s: %f (%f)' % (name, cv_results.mean(), cv_results.std()))
+                    mean = cv_results.mean()
+                    table2_mean.append(mean)
+
+            mean = np.mean(table2_mean)
+            std = np.std(table2_mean)        
+            print(f'3x10-Fold Cross Validation: {mean} ({std})')
+
         print('Fim Experimento kNN -')
         print('----------------------------------------------------------')
 
