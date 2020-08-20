@@ -140,7 +140,7 @@ class Clustering:
            }
         
         partScores = { 'DB-Index': [], 'Silhouette': [], 'CR-Index': []}
-        X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.10, random_state=50)
+        X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.40, random_state=50)
         
         
         #print(Y_train)
@@ -225,13 +225,13 @@ class Clustering:
         }
         
         
-        X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.30, random_state=50)
+        X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.40, random_state=50)
         for k in ks:
             model = AgglomerativeClustering(n_clusters=k).fit(X_train)
             labels = model.labels_
             #clusters = model.n_clusters_
             
-            predict_labels = model.fit_predict(X_test)
+            #predict_labels = model.fit_predict(X_test)
             
             
             db_index = davies_bouldin_score(X_train, labels)
