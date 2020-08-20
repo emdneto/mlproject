@@ -184,7 +184,7 @@ class Clustering:
             score = partScores[metric]
             mean = np.mean(score)
             std = np.std(score)
-            
+            print(f'{metric}Média: {mean} ({std})')
             #print(score)
             fig, ax = pyplot.subplots()
             ax.plot(ks, score)
@@ -254,11 +254,10 @@ class Clustering:
         
         print('='*20, "Calculando Média e desvio padrão para cada índice", '='*20)
         for metric in metric_names:
-            print(metric)
             score = scores[metric]
             mean = np.mean(score)
             std = np.std(score)
-            print(f'Média: {mean} ({std})')
+            print(f'{metric}Média: {mean} ({std})')
             #print(score)
             fig, ax = pyplot.subplots()
             ax.plot(ks, score)
@@ -273,4 +272,4 @@ class Clustering:
 chkp = Clustering('teste.csv')
 chkp.generateBases()
 chkp.kmeans()
-#chkp.agglomerativeClustering()
+chkp.agglomerativeClustering()
