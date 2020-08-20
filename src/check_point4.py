@@ -51,6 +51,7 @@ from sklearn import metrics
 from sklearn.metrics import pairwise_distances
 from sklearn.metrics import davies_bouldin_score
 from sklearn.cluster import AgglomerativeClustering
+from sklearn import preprocessing
 class Clustering:
 
     def __init__(self, scenario):
@@ -116,33 +117,49 @@ class Clustering:
         y = array[:,arrLen]
         X = normalize(X)
         
+        print(y)
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(y)
+        print(y)
+        
         ks = list(range(2, 21))
         
-        metric_names = ['DB-Index', 'Silhouette-Score', 'AR-Index']
+        metric_names = ['DB-Index', 'Silhouette', 'CR-Index']
         
         scores = {
-            'DB-Index': [],
-            'Silhouette-Score': [],
-            'AR-Index': []
-        }
+               'mean': {
+                       'DB-Index': [],
+                       'Silhouette': [],
+                       'CR-Index': []
+                       },
+               'std': {
+                   'DB-Index': [],
+                   'Silhouette': [],
+                   'CR-Index': []
+               }
+           }
+        
+        partScores = { 'DB-Index': [], 'Silhouette': [], 'CR-Index': []}
+        X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.10, random_state=50)
         
         
-        X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.30, random_state=50)
+        #print(Y_train)
         for k in ks:
-            k_means_model = KMeans(n_clusters=k, n_init=5).fit(X_train)
+            #partScores = { 'DB-Index': [], 'Silhouette': [], 'CR-Index': []}
+            
+            #for i in range(5):
+            k_means_model = KMeans(n_clusters=k, random_state=k+1).fit(X_train)
             labels = k_means_model.labels_
-            clusters = k_means_model.cluster_centers_
-            print(clusters)
-            predict_labels = k_means_model.predict(X_test)
-            
-            
-            db_index = davies_bouldin_score(X_test, predict_labels)
-            scores['DB-Index'].append(db_index)
-            silhouette_score = metrics.silhouette_score(X_test, predict_labels, metric='euclidean')
-            scores['Silhouette-Score'].append(silhouette_score)
-            labels_copy = labels[4136:7240]
-            cr_index = metrics.adjusted_rand_score(labels_copy, predict_labels)
-            scores['AR-Index'].append(cr_index)
+            print(labels)
+            #clusters = k_means_model.cluster_centers_
+            #print(clusters)
+            #predict_labels = k_means_model.predict(X_test)
+            db_index = davies_bouldin_score(X_train, labels)
+            partScores['DB-Index'].append(db_index)
+            silhouette_score = metrics.silhouette_score(X_train, labels, metric='euclidean')
+            partScores['Silhouette'].append(silhouette_score)
+            cr_index = metrics.adjusted_rand_score(Y_train, labels)
+            partScores['CR-Index'].append(cr_index)
             print('='*10)
             print('Valor de K:', k)
             print('Indíce DB:', db_index)
@@ -151,16 +168,23 @@ class Clustering:
             #print('labels:', labels)
             #print('predicted labels', predict_labels)
             #print('CR-Index:', cr_index)
-            
+            '''
+            for metric in metric_names:
+                score = partScores[metric]
+                mean = np.mean(score)
+                std = np.std(score)
+                totalScore = scores['mean'][metric].append(mean)
+                totalStd = scores['std'][metric].append(std)
+                print(f'Média: {mean} ({std})')
+            '''
             
         
         print('='*20, "Calculando Média e desvio padrão para cada índice", '='*20)
         for metric in metric_names:
-            print(metric)
-            score = scores[metric]
+            score = partScores[metric]
             mean = np.mean(score)
             std = np.std(score)
-            print(f'Média: {mean} ({std})')
+            
             #print(score)
             fig, ax = pyplot.subplots()
             ax.plot(ks, score)
@@ -187,7 +211,9 @@ class Clustering:
         X = array[:,0:arrLen]
         y = array[:,arrLen]
         X = normalize(X)
-        
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(y)
+        print(y)
         ks = list(range(2, 21))
         
         metric_names = ['DB-Index', 'Silhouette-Score', 'AR-Index']
@@ -203,17 +229,17 @@ class Clustering:
         for k in ks:
             model = AgglomerativeClustering(n_clusters=k).fit(X_train)
             labels = model.labels_
-            clusters = model.n_clusters_
+            #clusters = model.n_clusters_
             
             predict_labels = model.fit_predict(X_test)
             
             
-            db_index = davies_bouldin_score(X_test, predict_labels)
+            db_index = davies_bouldin_score(X_train, labels)
             scores['DB-Index'].append(db_index)
-            silhouette_score = metrics.silhouette_score(X_test, predict_labels, metric='euclidean')
+            silhouette_score = metrics.silhouette_score(X_train, labels, metric='euclidean')
             scores['Silhouette-Score'].append(silhouette_score)
-            labels_copy = labels[4136:7240]
-            cr_index = metrics.adjusted_rand_score(labels_copy, predict_labels)
+            
+            cr_index = metrics.adjusted_rand_score(Y_train, labels)
             scores['AR-Index'].append(cr_index)
             print('='*10)
             print('Valor de K:', k)
@@ -246,5 +272,5 @@ class Clustering:
     
 chkp = Clustering('teste.csv')
 chkp.generateBases()
-#chkp.kmeans()
-chkp.agglomerativeClustering()
+chkp.kmeans()
+#chkp.agglomerativeClustering()
