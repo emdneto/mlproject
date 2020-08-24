@@ -73,7 +73,7 @@ class BaggingBoosting:
         self.baggingTable = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": [], "Média (class)": []})
         self.boostingTable = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": [], "Média (class)": []})
         self.stackingHomTable = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": [], "Média (class)": []})
-        self.stackingHetTable = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": [], "Média (class)": []})
+        self.stackingHetTable = pd.DataFrame({"Configuração": [], "Score": []})
         #self.bases = ['BaseOriginal', 'BaseReduzida1', 'BaseReduzida2', 'BaseReduzida3']
 
 
@@ -252,11 +252,55 @@ class BaggingBoosting:
         self.stackingHomTable.at[index+1, "Média (class)"] = self.stackingHomTable['Média (class)'].mean()
 
         print(self.stackingHomTable.head(5))
+    
+    def step3(self):
+        base = 'BaseReduzida1'
+        dataset = self.bases[base]
+        array = dataset.values
+        arrLen = len(dataset.columns) - 1
+        X = array[:,0:arrLen]
+        y = array[:,arrLen]
+        X = normalize(X)
+        
+        list_confs = ["A", "B", "C", "D"]
+        confs = {
+            "A": [('AD', DecisionTreeClassifier()), ('k-NN', KNeighborsClassifier(n_neighbors=13)), ],
+            "B": [('AD', DecisionTreeClassifier()),('MLP', MLPClassifier(momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12))],
+            "C": [('k-NN', KNeighborsClassifier(n_neighbors=13)),('MLP', MLPClassifier(momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12))],
+            "D": [('AD', DecisionTreeClassifier()),('k-NN', KNeighborsClassifier(n_neighbors=13)), ('MLP', MLPClassifier(momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12))]
+        }
+        
+        base_estimators = [
+            
+            ('k-NN', KNeighborsClassifier(n_neighbors=13)),
+            ('AD', DecisionTreeClassifier()),
+            ('NB', GaussianNB()),
+            ('MLP', MLPClassifier(momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12))
+        ]
+        
+        index = 0
+        scores = []
+        for conf_name in list_confs:
+            self.stackingHetTable.at[index, 'Configuração'] = conf_name
+            
+            rng = np.random.RandomState(42)
+            stackingHet = StackingClassifier(estimators=confs[conf_name], final_estimator=RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1))
+            X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.30, stratify=y, random_state=rng)
+            predictions = stackingHet.fit(X_train, Y_train).predict(X_test)
+            acc = accuracy_score(Y_test, predictions) * 100
+            scores.append(acc)
+            print(f'{conf_name}: {acc}')       
+            self.stackingHetTable.at[index, "Score"] = acc          
+            index += 1
+        
+        self.stackingHetTable.at[index+1, "Configuração"] = 'Média (CONF)'
+        self.stackingHetTable.at[index+1, "Score"] = self.stackingHetTable['Score'].mean()
+        print(self.stackingHetTable.head(5))
        
 
 chkp = BaggingBoosting('teste.csv')
 chkp.generateBases()
 #chkp.step1()
-chkp.step2()
+chkp.step3()
     
     
