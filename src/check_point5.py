@@ -343,12 +343,12 @@ class BaggingBoosting:
             self.stackingHetTable.at[index, "Média (class)"] = np.mean(scores)
             index += 1
 
-        self.stackingHetTable.at[index+1, "Estratégia"] = 'Média (CONF)'
+        self.stackingHetTable.at[index+1, "Configuração"] = 'Média (conf)'
         self.stackingHetTable.at[index+1, "10"] = self.stackingHetTable['10'].mean()
         self.stackingHetTable.at[index+1, "15"] = self.stackingHetTable['15'].mean()
         self.stackingHetTable.at[index+1, "20"] = self.stackingHetTable['20'].mean()
         self.stackingHetTable.at[index+1, "Média (class)"] = self.stackingHetTable['Média (class)'].mean()
-        print(self.stackingHetTable.head(5))
+        print(self.stackingHetTable.head(10))
 
                 
         #pprint(confs)
