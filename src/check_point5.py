@@ -74,6 +74,9 @@ class BaggingBoosting:
         self.boostingTable = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": [], "Média (class)": []})
         self.stackingHomTable = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": [], "Média (class)": []})
         self.stackingHetTable = pd.DataFrame({"Configuração": [], "10": [], "15": [], "20": [], "Média (class)": []})
+        self.featureSelComite = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": [], "Média (class)": []})
+        self.baggingpValueT = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": []})
+        self.baggingpValueC = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": []})
         #self.bases = ['BaseOriginal', 'BaseReduzida1', 'BaseReduzida2', 'BaseReduzida3']
 
 
@@ -125,7 +128,9 @@ class BaggingBoosting:
         X = array[:,0:arrLen]
         y = array[:,arrLen]
         X = normalize(X)
-        X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.30, random_state=50)
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(y)
+        X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.30, random_state=42)
         
         
         n_estimators = [10, 15, 20]
@@ -139,23 +144,32 @@ class BaggingBoosting:
         ]
         
         
-        
+        measurements = {}
         
         index = 0
         for name, clf in base_estimators:
             self.baggingTable.at[index, "Estratégia"] = name
             self.boostingTable.at[index, "Estratégia"] = name
+            self.baggingpValueT.at[index, "Estratégia"] = name
+            measurements[name] = {}
             baggingScores = []            
             boostingScores = []
             for i in n_estimators:
+                measurements[name][i] = []
                 print(f'Running {clf} with n_estimators {i}')
                 rng = np.random.RandomState(42)
                 bagging_clf = BaggingClassifier(base_estimator=clf, n_estimators=i, random_state=rng).fit(X_train, Y_train)
                 boosting_clf = GradientBoostingClassifier(init=clf, n_estimators=i, random_state=rng).fit(X_train, Y_train)
-               
+                
+
                 bagging_predict = bagging_clf.predict(X_test)
                 boosting_predict = boosting_clf.predict(X_test)
                 
+                ttest = stats.ttest_rel(Y_test, bagging_predict)
+                print(f'test for {name} with {i} estimators: {ttest}')
+                ss = "{:.4f}".format(ttest[1]) 
+                print(ss)
+                self.baggingpValueT.at[index, str(i)] = ss
                 bagging_acc = accuracy_score(Y_test, bagging_predict)
                 boosting_acc = accuracy_score(Y_test, boosting_predict)
                 
@@ -164,7 +178,7 @@ class BaggingBoosting:
                 
                 formatBagging = bagging_acc * 100
                 formatBoosting = boosting_acc * 100
-                
+                measurements[name][i].append(bagging_acc)
                 baggingScores.append(formatBagging)
                 boostingScores.append(formatBoosting)
                 
@@ -175,7 +189,7 @@ class BaggingBoosting:
             self.boostingTable.at[index, "Média (class)"] = np.mean(boostingScores)
             index += 1
         
-
+            
         self.baggingTable.at[index+1, "Estratégia"] = 'Média (TAM)'
         self.baggingTable.at[index+1, "10"] = self.baggingTable['10'].mean()
         self.baggingTable.at[index+1, "15"] = self.baggingTable['15'].mean()
@@ -196,6 +210,9 @@ class BaggingBoosting:
         
         print('Boosting Table')
         print(self.boostingTable.head(5))
+        
+        print('p-value table')
+        print(self.baggingpValueT)
     
     
     def step2(self):
@@ -384,11 +401,88 @@ class BaggingBoosting:
         self.stackingHetTable.at[index+1, "Configuração"] = 'Média (CONF)'
         self.stackingHetTable.at[index+1, "Score"] = self.stackingHetTable['Score'].mean()
         print(self.stackingHetTable.head(5))
-        '''   
+    
+    
+       '''   
+    def step4(self):
+        base = 'BaseReduzida1'
+        dataset = self.bases[base]
+        array = dataset.values
+        arrLen = len(dataset.columns) - 1
+        X = array[:,0:arrLen]
+        y = array[:,arrLen]
+        X = normalize(X)
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(y)
+
+        
+        
+        
+        n_estimators = [10, 15, 20]
+
+        
+        base_estimators = [
+            
+            ('k-NN', KNeighborsClassifier(n_neighbors=13)),
+            ('AD', DecisionTreeClassifier()),
+            ('NB', GaussianNB()),
+            ('MLP', MLPClassifier(momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12))
+        ]
+        
+        
+        
+        
+        index = 0
+        for name, clf in base_estimators:
+            self.featureSelComite.at[index, "Estratégia"] = name
+            self.baggingpValueC.at[index, "Estratégia"] = name
+            scores = []            
+            for i in n_estimators:
+                print(f'Running {clf} with n_estimators {i}')
+                rng = np.random.RandomState(42)
+                X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.50, stratify=y, random_state=rng)
+                bagging_clf = BaggingClassifier(base_estimator=clf, n_estimators=i, random_state=rng, max_features=0.5, bootstrap_features=True).fit(X_train, Y_train)
+               
+
+                bagging_predict = bagging_clf.predict(X_test)
+                ttest = stats.ttest_rel(Y_test, bagging_predict)
+                print(f'test for {name} with {i} estimators: {ttest}')
+                ss = "{:.4f}".format(ttest[1]) 
+                print(ss)
+                self.baggingpValueC.at[index, str(i)] = ss
+                
+                bagging_acc = accuracy_score(Y_test, bagging_predict)
+                
+                print(f'Acurácia de predição - Bagging ({name}):', bagging_acc)
+                
+                
+                formatBagging = bagging_acc * 100
+                
+                scores.append(formatBagging)
+                self.featureSelComite.at[index, str(i)] =   formatBagging
+                
+            self.featureSelComite.at[index, "Média (class)"] = np.mean(scores)
+            index += 1
+        
+
+        self.featureSelComite.at[index+1, "Estratégia"] = 'Média (TAM)'
+        self.featureSelComite.at[index+1, "10"] = self.featureSelComite['10'].mean()
+        self.featureSelComite.at[index+1, "15"] = self.featureSelComite['15'].mean()
+        self.featureSelComite.at[index+1, "20"] = self.featureSelComite['20'].mean()
+        self.featureSelComite.at[index+1, "Média (class)"] = self.featureSelComite['Média (class)'].mean()
+        
+        print(self.featureSelComite.head(10))
+        
+        print('p-value table')
+        print(self.baggingpValueC)
+        
+        
 
 chkp = BaggingBoosting('teste.csv')
 chkp.generateBases()
-#chkp.step1()
-chkp.step3()
+chkp.step1()
+#chkp.step2()
+#chkp.step3()
+chkp.step4()
     
     
