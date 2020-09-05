@@ -2,6 +2,7 @@ from pandas import read_csv
 from pprint import pprint
 import numpy as np
 import pandas as pd
+import scikit_posthocs as sp
 from scipy import stats
 from matplotlib import pyplot
 from pandas.plotting import scatter_matrix
@@ -60,6 +61,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LassoCV
 from sklearn.linear_model import RidgeCV
 
+
 class BaggingBoosting:
 
     def __init__(self, scenario):
@@ -77,6 +79,9 @@ class BaggingBoosting:
         self.featureSelComite = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": [], "Média (class)": []})
         self.baggingpValueT = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": []})
         self.baggingpValueC = pd.DataFrame({"Estratégia": [], "10": [], "15": [], "20": []})
+        self.measurementsStack = {}
+        self.baggingComparison1 = {}
+        self.baggingComparison2 = {}
         #self.bases = ['BaseOriginal', 'BaseReduzida1', 'BaseReduzida2', 'BaseReduzida3']
 
 
@@ -135,6 +140,7 @@ class BaggingBoosting:
         
         n_estimators = [10, 15, 20]
         
+        
         base_estimators = [
             
             ('k-NN', KNeighborsClassifier(n_neighbors=13)),
@@ -142,7 +148,15 @@ class BaggingBoosting:
             ('NB', GaussianNB()),
             ('MLP', MLPClassifier(momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12))
         ]
-        
+        '''
+        base_estimators = [
+            
+            ('k-NN', KNeighborsClassifier(n_neighbors=13)),
+            ('AD', DecisionTreeClassifier()),
+            ('NB', GaussianNB())
+          
+        ]
+        '''
         
         measurements = {}
         
@@ -154,8 +168,10 @@ class BaggingBoosting:
             measurements[name] = {}
             baggingScores = []            
             boostingScores = []
+            self.baggingComparison1[name] = {}
             for i in n_estimators:
-                measurements[name][i] = []
+                
+                measurements[name][i] = {}
                 print(f'Running {clf} with n_estimators {i}')
                 rng = np.random.RandomState(42)
                 bagging_clf = BaggingClassifier(base_estimator=clf, n_estimators=i, random_state=rng).fit(X_train, Y_train)
@@ -164,21 +180,26 @@ class BaggingBoosting:
 
                 bagging_predict = bagging_clf.predict(X_test)
                 boosting_predict = boosting_clf.predict(X_test)
-                
-                ttest = stats.ttest_rel(Y_test, bagging_predict)
+                self.baggingComparison1[name][i] = bagging_predict
+                measurements[name][i]['boosting'] = boosting_predict
+                measurements[name][i]['bagging'] = bagging_predict
+                '''
+                ttest = stats.kruskal(Y_test, bagging_predict)
                 print(f'test for {name} with {i} estimators: {ttest}')
                 ss = "{:.4f}".format(ttest[1]) 
                 print(ss)
                 self.baggingpValueT.at[index, str(i)] = ss
+                '''
                 bagging_acc = accuracy_score(Y_test, bagging_predict)
                 boosting_acc = accuracy_score(Y_test, boosting_predict)
                 
+                '''
                 print(f'Acurácia de predição - Bagging ({name}):', bagging_acc)
                 print(f'Acurácia de predição - Boosting ({name}):', boosting_acc)
-                
+                '''
                 formatBagging = bagging_acc * 100
                 formatBoosting = boosting_acc * 100
-                measurements[name][i].append(bagging_acc)
+                #self.measurements1[name][i] = bagging_predict
                 baggingScores.append(formatBagging)
                 boostingScores.append(formatBoosting)
                 
@@ -189,7 +210,16 @@ class BaggingBoosting:
             self.boostingTable.at[index, "Média (class)"] = np.mean(boostingScores)
             index += 1
         
-            
+        
+        ''''
+        scores = []
+        for name, clf in base_estimators:
+            score = measurements[name][15]
+            scores.append(score)
+        
+        test = stats.kruskal(scores[0], scores[1], scores[2], scores[3])
+        print(test)
+        '''
         self.baggingTable.at[index+1, "Estratégia"] = 'Média (TAM)'
         self.baggingTable.at[index+1, "10"] = self.baggingTable['10'].mean()
         self.baggingTable.at[index+1, "15"] = self.baggingTable['15'].mean()
@@ -211,8 +241,24 @@ class BaggingBoosting:
         print('Boosting Table')
         print(self.boostingTable.head(5))
         
-        print('p-value table')
-        print(self.baggingpValueT)
+        print('p-value: Bagging x Boosting for all estimators and n_estimators (10, 15, 20)')
+        for name, clf in base_estimators:
+            for i in n_estimators:
+                ms1 = measurements[name][i]['bagging']
+                ms2 = measurements[name][i]['boosting']
+                tests = [
+                    ('Ttest-ind', stats.ttest_ind(ms1, ms2)),
+                    ('Wilcoxon', stats.wilcoxon(ms1, ms2))
+                ]
+                for method, test in tests:
+                    stat, p = test
+                    if p > 0.05:
+	                    print(f'{method}-{name}-{i}: stat=%.3f, p=%.3f -- Probably the same distribution' % (stat, p))
+                    else:
+                        print(f'{method}-{name}-{i}: stat=%.3f, p=%.3f -- Probably different distribution' % (stat, p))
+        
+        print('\n')
+        #print(self.baggingpValueT)
     
     
     def step2(self):
@@ -248,12 +294,15 @@ class BaggingBoosting:
         index = 0
         for name, clf in base_estimators:
             self.stackingHomTable.at[index, 'Estratégia'] = name
+            self.measurementsStack[name] = {}
             scores = []
             for n in n_estimators:
+                self.measurementsStack[name][n] = {}
                 rng = np.random.RandomState(42)
                 stackingHom = StackingClassifier(estimators=estimators[name][str(n)], final_estimator=RandomForestClassifier(max_depth=5, n_estimators=n, max_features=1))
                 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.30, stratify=y, random_state=rng)
                 predictions = stackingHom.fit(X_train, Y_train).predict(X_test)
+                self.measurementsStack[name][n]['stackhom'] = predictions
                 acc = accuracy_score(Y_test, predictions) * 100
                 scores.append(acc)
                 print(f'{name} with {n} estimators: {acc}')
@@ -341,8 +390,10 @@ class BaggingBoosting:
         index = 0
         for conf_name in list_confs:
             self.stackingHetTable.at[index, 'Configuração'] = conf_name
+            self.measurementsStack[conf_name] = {}
             scores = []
             for n in n_estimators:
+                self.measurementsStack[conf_name][n] = {}
                 rng = np.random.RandomState(42)
                 estimators = confs[conf_name][n]
                 print('='*50)
@@ -352,6 +403,7 @@ class BaggingBoosting:
                 stackingHet = StackingClassifier(estimators=estimators, final_estimator=RandomForestClassifier(max_depth=5, n_estimators=n, max_features=1))
                 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.30, stratify=y, random_state=rng)
                 predictions = stackingHet.fit(X_train, Y_train).predict(X_test)
+                self.measurementsStack[conf_name][n]['stackhet'] = predictions
                 acc = accuracy_score(Y_test, predictions) * 100
                 scores.append(acc)
                 print(f'{conf_name} with {n} estimators: {acc}')
@@ -421,6 +473,7 @@ class BaggingBoosting:
         n_estimators = [10, 15, 20]
 
         
+        
         base_estimators = [
             
             ('k-NN', KNeighborsClassifier(n_neighbors=13)),
@@ -428,7 +481,15 @@ class BaggingBoosting:
             ('NB', GaussianNB()),
             ('MLP', MLPClassifier(momentum=0.8, max_iter=500, learning_rate_init=0.1, hidden_layer_sizes=12))
         ]
-        
+        '''
+        base_estimators = [
+            
+            ('k-NN', KNeighborsClassifier(n_neighbors=13)),
+            ('AD', DecisionTreeClassifier()),
+            ('NB', GaussianNB())
+          
+        ]
+        '''
         
         
         
@@ -436,21 +497,26 @@ class BaggingBoosting:
         for name, clf in base_estimators:
             self.featureSelComite.at[index, "Estratégia"] = name
             self.baggingpValueC.at[index, "Estratégia"] = name
+            self.baggingComparison2[name] = {}
             scores = []            
             for i in n_estimators:
+                
                 print(f'Running {clf} with n_estimators {i}')
                 rng = np.random.RandomState(42)
-                X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.50, stratify=y, random_state=rng)
+                X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.30, stratify=y, random_state=rng)
                 bagging_clf = BaggingClassifier(base_estimator=clf, n_estimators=i, random_state=rng, max_features=0.5, bootstrap_features=True).fit(X_train, Y_train)
                
 
                 bagging_predict = bagging_clf.predict(X_test)
+                self.baggingComparison2[name][i] = bagging_predict
+                #self.measurements2[name][i] = bagging_predict
+                '''
                 ttest = stats.ttest_rel(Y_test, bagging_predict)
                 print(f'test for {name} with {i} estimators: {ttest}')
                 ss = "{:.4f}".format(ttest[1]) 
                 print(ss)
                 self.baggingpValueC.at[index, str(i)] = ss
-                
+                '''
                 bagging_acc = accuracy_score(Y_test, bagging_predict)
                 
                 print(f'Acurácia de predição - Bagging ({name}):', bagging_acc)
@@ -458,13 +524,22 @@ class BaggingBoosting:
                 
                 formatBagging = bagging_acc * 100
                 
+                
                 scores.append(formatBagging)
                 self.featureSelComite.at[index, str(i)] =   formatBagging
                 
             self.featureSelComite.at[index, "Média (class)"] = np.mean(scores)
             index += 1
         
-
+        '''
+        scores = []
+        for name, clf in base_estimators:
+            score = measurements[name][15]
+            scores.append(score)
+        
+        test = stats.kruskal(scores[0], scores[1], scores[2], scores[3])
+        print(test)
+        '''
         self.featureSelComite.at[index+1, "Estratégia"] = 'Média (TAM)'
         self.featureSelComite.at[index+1, "10"] = self.featureSelComite['10'].mean()
         self.featureSelComite.at[index+1, "15"] = self.featureSelComite['15'].mean()
@@ -473,16 +548,61 @@ class BaggingBoosting:
         
         print(self.featureSelComite.head(10))
         
-        print('p-value table')
-        print(self.baggingpValueC)
+        #print('p-value table')
+        #print(self.baggingpValueC)
         
+    
+    def stack_test(self):
         
+        n_estimators = [10, 15, 20]
+
+        
+        base_estimators = [
+            
+            ('k-NN', 'A'),
+            ('AD', 'B'),
+            ('NB', 'C'),
+            ('MLP', 'D')
+        ]
+        '''
+        base_estimators = [
+            
+            ('k-NN', KNeighborsClassifier(n_neighbors=13)),
+            ('AD', DecisionTreeClassifier()),
+            ('NB', GaussianNB())
+          
+        ]
+        '''
+        print('p-value for stack hom vs stack het')
+        for name1, name2 in base_estimators:
+            print(f'{name1} vs {name2}')
+            for n in n_estimators:
+                ms1 = self.measurementsStack[name1][n]['stackhom']
+                ms2 = self.measurementsStack[name2][n]['stackhet']
+                
+                print(ms1)
+                print(ms2)
+                
+                tests = [
+                    ('Ttest-ind', stats.ttest_ind(ms1,ms2)),
+                    ('Wilcoxon', stats.wilcoxon(ms1, ms2))
+                ]
+                for method, test in tests:
+                    stat, p = test
+                    if p > 0.05:
+	                    print(f'{method}-{i}: stat=%.3f, p=%.3f -- Probably the same distribution' % (stat, p))
+                    else:
+                        print(f'{method}-{i}: stat=%.3f, p=%.3f -- Probably different distribution' % (stat, p))
+        
+        print('\n')
+                
+
+            
 
 chkp = BaggingBoosting('teste.csv')
 chkp.generateBases()
-chkp.step1()
-#chkp.step2()
-#chkp.step3()
-chkp.step4()
-    
-    
+#chkp.step1()
+chkp.step2()
+chkp.step3()
+#chkp.step4()
+chkp.stack_test()

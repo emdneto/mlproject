@@ -58,6 +58,7 @@ class Supervisioned:
         self.BaseOriginal = None
         self.bases = None
         #self.bases = ['BaseOriginal', 'BaseReduzida1', 'BaseReduzida2', 'BaseReduzida3']
+        #self.predicts = pd.DataFrame({"Estratégia": [], "BaseReduzida1": [], "BaseReduzida2": [], "BaseReduzida3": []})
 
 
 
@@ -98,8 +99,8 @@ class Supervisioned:
             'BaseReduzida3': self.BaseReduzida3
         }
 
-        #self.kNN()
-        self.ad()
+        self.kNN()
+        #self.ad()
         #self.nb()
         #self.mlp()
 

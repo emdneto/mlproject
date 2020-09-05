@@ -52,6 +52,7 @@ from sklearn.metrics import pairwise_distances
 from sklearn.metrics import davies_bouldin_score
 from sklearn.cluster import AgglomerativeClustering
 from sklearn import preprocessing
+
 class Clustering:
 
     def __init__(self, scenario):
