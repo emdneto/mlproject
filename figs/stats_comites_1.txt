@@ -1,0 +1,57 @@
+p-value table Primeiro Bagging x Segundo bagging
+
+1º Bagging x 2º Bagging para k-NN com 10 estimators
+Ttest-ind-10: stat=-0.677, p=0.498 -- Probably the same distribution
+Wilcoxon-10: stat=933147.500, p=0.476 -- Probably the same distribution
+
+1º Bagging x 2º Bagging para k-NN com 15 estimators
+Ttest-ind-15: stat=-0.850, p=0.395 -- Probably the same distribution
+Wilcoxon-15: stat=939567.500, p=0.375 -- Probably the same distribution
+
+1º Bagging x 2º Bagging para k-NN com 20 estimators
+Ttest-ind-20: stat=-0.614, p=0.539 -- Probably the same distribution
+Wilcoxon-20: stat=935014.000, p=0.553 -- Probably the same distribution
+
+1º Bagging x 2º Bagging para AD com 10 estimators
+Ttest-ind-10: stat=-0.642, p=0.521 -- Probably the same distribution
+Wilcoxon-10: stat=938064.500, p=0.505 -- Probably the same distribution
+
+1º Bagging x 2º Bagging para AD com 15 estimators
+Ttest-ind-15: stat=-0.797, p=0.425 -- Probably the same distribution
+Wilcoxon-15: stat=920771.000, p=0.430 -- Probably the same distribution
+
+1º Bagging x 2º Bagging para AD com 20 estimators
+Ttest-ind-20: stat=-0.579, p=0.563 -- Probably the same distribution
+Wilcoxon-20: stat=924965.500, p=0.568 -- Probably the same distribution
+
+1º Bagging x 2º Bagging para NB com 10 estimators
+Ttest-ind-10: stat=-3.933, p=0.000 -- Probably different distribution
+Wilcoxon-10: stat=905557.500, p=0.000 -- Probably different distribution
+
+1º Bagging x 2º Bagging para NB com 15 estimators
+Ttest-ind-15: stat=-3.597, p=0.000 -- Probably different distribution
+Wilcoxon-15: stat=921496.500, p=0.000 -- Probably different distribution
+
+1º Bagging x 2º Bagging para NB com 20 estimators
+Ttest-ind-20: stat=-3.801, p=0.000 -- Probably different distribution
+Wilcoxon-20: stat=900714.000, p=0.000 -- Probably different distribution
+
+1º Bagging x 2º Bagging para MLP com 10 estimators
+Ttest-ind-10: stat=-2.689, p=0.007 -- Probably different distribution
+Wilcoxon-10: stat=870373.500, p=0.007 -- Probably different distribution
+
+1º Bagging x 2º Bagging para MLP com 15 estimators
+Ttest-ind-15: stat=-2.734, p=0.006 -- Probably different distribution
+Wilcoxon-15: stat=861146.500, p=0.006 -- Probably different distribution
+
+1º Bagging x 2º Bagging para MLP com 20 estimators
+Ttest-ind-20: stat=-2.243, p=0.025 -- Probably different distribution
+Wilcoxon-20: stat=878148.000, p=0.025 -- Probably different distribution
+
+
+
+Stack Homogêneo - Friedman
+stat=295.227, p=0.000 -- Probably different distribution
+
+Stack Heterogêneo - Friedman
+stat=41.104, p=0.000 -- Probably different distribution

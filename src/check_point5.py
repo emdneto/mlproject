@@ -158,6 +158,8 @@ class BaggingBoosting:
         ]
         '''
         
+        msBagging = {}
+        msBoosting = {}
         measurements = {}
         
         index = 0
@@ -169,9 +171,13 @@ class BaggingBoosting:
             baggingScores = []            
             boostingScores = []
             self.baggingComparison1[name] = {}
+            msBagging[name] = {}
+            msBoosting[name] = {}
             for i in n_estimators:
                 
                 measurements[name][i] = {}
+                
+                
                 print(f'Running {clf} with n_estimators {i}')
                 rng = np.random.RandomState(42)
                 bagging_clf = BaggingClassifier(base_estimator=clf, n_estimators=i, random_state=rng).fit(X_train, Y_train)
@@ -181,6 +187,7 @@ class BaggingBoosting:
                 bagging_predict = bagging_clf.predict(X_test)
                 boosting_predict = boosting_clf.predict(X_test)
                 self.baggingComparison1[name][i] = bagging_predict
+                
                 measurements[name][i]['boosting'] = boosting_predict
                 measurements[name][i]['bagging'] = bagging_predict
                 '''
@@ -241,7 +248,33 @@ class BaggingBoosting:
         print('Boosting Table')
         print(self.boostingTable.head(5))
         
-        print('p-value: Bagging x Boosting for all estimators and n_estimators (10, 15, 20)')
+        print('p-value: Bagging for 15 estimators (AD x k-NN x NB x MLP')
+        msBaggingAD = measurements['AD'][15]['bagging']
+        msBaggingNB = measurements['NB'][15]['bagging'] 
+        msBaggingKNN = measurements['k-NN'][15]['bagging']
+        msBaggingMLP = measurements['MLP'][15]['bagging']
+        
+        msBoostingAD = measurements['AD'][15]['boosting']
+        msBoostingNB = measurements['NB'][15]['boosting']
+        msBoostingKNN = measurements['k-NN'][15]['boosting']
+        msBoostingMLP = measurements['MLP'][15]['boosting']
+        
+        baggingFriedman = stats.friedmanchisquare(msBaggingAD, msBaggingKNN, msBaggingNB, msBaggingMLP)
+        stat, p = baggingFriedman
+        if p > 0.05:
+	        print(f'stat=%.3f, p=%.3f -- Probably the same distribution' % (stat, p))
+        else:
+            print(f'stat=%.3f, p=%.3f -- Probably different distribution' % (stat, p))
+        
+        boostingFriedman = stats.friedmanchisquare(msBoostingAD, msBoostingNB, msBoostingKNN, msBoostingMLP)
+        stat, p = boostingFriedman
+        if p > 0.05:
+	        print(f'stat=%.3f, p=%.3f -- Probably the same distribution' % (stat, p))
+        else:
+            print(f'stat=%.3f, p=%.3f -- Probably different distribution' % (stat, p))
+        
+        
+        '''
         for name, clf in base_estimators:
             for i in n_estimators:
                 ms1 = measurements[name][i]['bagging']
@@ -259,7 +292,7 @@ class BaggingBoosting:
         
         print('\n')
         #print(self.baggingpValueT)
-    
+    '''
     
     def step2(self):
         base = 'BaseReduzida1'
@@ -269,7 +302,8 @@ class BaggingBoosting:
         X = array[:,0:arrLen]
         y = array[:,arrLen]
         X = normalize(X)
-        
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(y)
         
         n_estimators = [10, 15, 20]
         
@@ -318,6 +352,18 @@ class BaggingBoosting:
         self.stackingHomTable.at[index+1, "Média (class)"] = self.stackingHomTable['Média (class)'].mean()
 
         print(self.stackingHomTable.head(5))
+        
+        msAD= self.measurementsStack['AD'][15]['stackhom']
+        msNB = self.measurementsStack['NB'][15]['stackhom']
+        msKNN = self.measurementsStack['k-NN'][15]['stackhom']
+        msMLP = self.measurementsStack['MLP'][15]['stackhom']
+        
+        test = stats.friedmanchisquare(msAD, msNB, msKNN, msMLP)
+        stat, p = test
+        if p > 0.05:
+	        print(f'stat=%.3f, p=%.3f -- Probably the same distribution' % (stat, p))
+        else:
+            print(f'stat=%.3f, p=%.3f -- Probably different distribution' % (stat, p))
     
     def step3(self):
         base = 'BaseReduzida1'
@@ -327,6 +373,9 @@ class BaggingBoosting:
         X = array[:,0:arrLen]
         y = array[:,arrLen]
         X = normalize(X)
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(y)
+
         
         
         
@@ -418,7 +467,18 @@ class BaggingBoosting:
         self.stackingHetTable.at[index+1, "20"] = self.stackingHetTable['20'].mean()
         self.stackingHetTable.at[index+1, "Média (class)"] = self.stackingHetTable['Média (class)'].mean()
         print(self.stackingHetTable.head(10))
-
+        
+        msAD= self.measurementsStack['A'][15]['stackhet']
+        msNB = self.measurementsStack['B'][15]['stackhet']
+        msKNN = self.measurementsStack['C'][15]['stackhet']
+        msMLP = self.measurementsStack['D'][15]['stackhet']
+        
+        test = stats.friedmanchisquare(msAD, msNB, msKNN, msMLP)
+        stat, p = test
+        if p > 0.05:
+	        print(f'stat=%.3f, p=%.3f -- Probably the same distribution' % (stat, p))
+        else:
+            print(f'stat=%.3f, p=%.3f -- Probably different distribution' % (stat, p))
                 
         #pprint(confs)
         #pprint(len(confs["D"][10]))
@@ -548,7 +608,29 @@ class BaggingBoosting:
         
         print(self.featureSelComite.head(10))
         
-        #print('p-value table')
+        print('p-value table Primeiro Bagging x Segundo bagging')
+        for name, clf in base_estimators:
+            for n in n_estimators:
+                print(f'1º Bagging x 2º Bagging para {name} com {n} estimators')
+                ms1 = self.baggingComparison1[name][n]
+                ms2 = self.baggingComparison2[name][n]
+                
+                #print(ms1)
+                #print(ms2)
+                
+                tests = [
+                    ('Ttest-ind', stats.ttest_ind(ms1,ms2)),
+                    ('Wilcoxon', stats.wilcoxon(ms1, ms2))
+                ]
+                for method, test in tests:
+                    stat, p = test
+                    if p > 0.05:
+	                    print(f'{method}-{n}: stat=%.3f, p=%.3f -- Probably the same distribution' % (stat, p))
+                    else:
+                        print(f'{method}-{n}: stat=%.3f, p=%.3f -- Probably different distribution' % (stat, p))
+        
+        print('\n')
+                
         #print(self.baggingpValueC)
         
     
@@ -602,7 +684,7 @@ class BaggingBoosting:
 chkp = BaggingBoosting('teste.csv')
 chkp.generateBases()
 #chkp.step1()
-chkp.step2()
+#chkp.step2()
 chkp.step3()
 #chkp.step4()
-chkp.stack_test()
+#chkp.stack_test()
